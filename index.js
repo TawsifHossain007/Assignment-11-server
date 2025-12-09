@@ -35,6 +35,14 @@ async function run() {
     //Issues
     app.get('/issues',async(req,res)=>{
 
+        const query = {}
+        const {email} = req.query
+        if(email){
+            query.reporterEmail = email
+        }
+        const cursor = issueCollection.find(query)
+        const result = await cursor.toArray()
+        res.send(result)
     })
 
     app.post('/issues',async(req,res)=>{
