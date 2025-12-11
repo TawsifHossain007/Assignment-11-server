@@ -46,6 +46,27 @@ async function run() {
       res.send(result);
     });
 
+    app.patch("/issues/:id",async(req,res)=>{
+      const id = req.params.id
+      const issueInfo = req.body;
+
+      const query = {_id : new ObjectId(id)}
+
+      const updatedDOC = {
+        $set: {
+          title: issueInfo.title,
+          description: issueInfo.description,
+            category: issueInfo.category,
+            image: issueInfo.image,
+            location: issueInfo.location,
+            date: issueInfo.date
+        }
+      }
+
+      const result = await issueCollection.updateOne(query,updatedDOC)
+      res.send(result)
+    })
+
     app.delete("/issues/:id", async(req,res)=>{
         const id = req.params.id;
         const query = {_id: new ObjectId(id)}
