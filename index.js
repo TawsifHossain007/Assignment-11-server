@@ -27,6 +27,49 @@ async function run() {
 
     const db = client.db("Assignment-11");
     const issueCollection = db.collection("issues");
+    const usersCollection = db.collection("users");
+
+    //users
+    app.get("/users/:email",async(req,res)=>{
+      const email = req.params.email;
+      const query = {email}
+      const result = await usersCollection.findOne(query)
+      res.send(result)
+    })
+
+    app.get("/users", async(req,res)=>{
+      const cursor = usersCollection.find()
+      const result = await cursor.toArray()
+      res.send(result)
+    })
+    
+    app.patch("/users/subscribe/:email", async(req,res)=>{
+      const email = req.params.email;
+      const query = email;
+      const updatedDOC = {
+        $set : {
+          role : 'Premium'
+        }
+      }
+      const result = await usersCollection.updateOne(query,updatedDOC)
+      res.send(result);
+    })
+
+    app.post("/users", async(req,res)=>{
+      const user = req.body;
+      user.role = 'user';
+      user.createdAt = new Date();
+      user.status = 'Regular'
+      const email = user.email;
+      const userExists = await usersCollection.findOne({email})
+
+      if(userExists){
+         return res.send({ message: 'user exists' })
+      }
+
+      const result = await usersCollection.insertOne(user);
+      res.send(result);
+    })
 
     //Issues
     app.get("/issues", async (req, res) => {
