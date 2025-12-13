@@ -28,6 +28,7 @@ async function run() {
     const db = client.db("Assignment-11");
     const issueCollection = db.collection("issues");
     const usersCollection = db.collection("users");
+    const staffCollection = db.collection("staffs");
 
     //users
     app.get("/users/:email",async(req,res)=>{
@@ -43,6 +44,13 @@ async function run() {
       res.send(result)
     })
 
+    app.get("/users/:email/role",async(req,res)=>{
+      const email = req.params.email
+      const query = {email}
+      const result = await usersCollection.findOne(query)
+      res.send(result)
+    })
+
     app.patch("/users/:id/role", async(req,res)=>{
       const id = req.params.id;
       const roleInfo = req.body;
@@ -55,6 +63,7 @@ async function run() {
       const result = await usersCollection.updateOne(query,updatedDOC)
       res.send(result)
     })
+
     app.patch("/users/:id/status", async(req,res)=>{
       const id = req.params.id;
       const statusInfo = req.body;
@@ -94,6 +103,29 @@ async function run() {
 
       const result = await usersCollection.insertOne(user);
       res.send(result);
+    })
+
+    //staffs
+    app.get("/staffs",async(req,res)=>{
+      const cursor = staffCollection.find()
+      const result = await cursor.toArray()
+      res.send(result)
+    })
+    
+    app.post("/staffs",async(req,res)=>{
+      const staff = req.body;
+      staff.status = 'Available',
+      staff.createdAt = new Date() 
+
+      const result = await staffCollection.insertOne(staff)
+      res.send(result)
+    })
+
+    app.delete("/staffs/:id", async(req,res)=>{
+      const id = req.params.id;
+      const query = {_id : new ObjectId(id)}
+      const result = await staffCollection.deleteOne(query)
+      res.send(result)
     })
 
     //Issues
