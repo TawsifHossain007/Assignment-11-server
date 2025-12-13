@@ -42,6 +42,31 @@ async function run() {
       const result = await cursor.toArray()
       res.send(result)
     })
+
+    app.patch("/users/:id/role", async(req,res)=>{
+      const id = req.params.id;
+      const roleInfo = req.body;
+      const query = {_id: new ObjectId(id)}
+      const updatedDOC = {
+        $set: {
+          role : roleInfo.role
+        }
+      }
+      const result = await usersCollection.updateOne(query,updatedDOC)
+      res.send(result)
+    })
+    app.patch("/users/:id/status", async(req,res)=>{
+      const id = req.params.id;
+      const statusInfo = req.body;
+      const query = {_id: new ObjectId(id)}
+      const updatedDOC = {
+        $set: {
+          status : statusInfo.status
+        }
+      }
+      const result = await usersCollection.updateOne(query,updatedDOC)
+      res.send(result)
+    })
     
     app.patch("/users/subscribe/:email", async(req,res)=>{
       const email = req.params.email;
