@@ -34,7 +34,10 @@ async function run() {
     app.get("/users/:email",async(req,res)=>{
       const email = req.params.email;
       const query = {email}
-      const result = await usersCollection.findOne(query)
+      let result = await usersCollection.findOne(query)
+      if(!result){
+        result = await staffCollection.findOne(query)
+      }
       res.send(result)
     })
 
@@ -47,8 +50,12 @@ async function run() {
     app.get("/users/:email/role",async(req,res)=>{
       const email = req.params.email
       const query = {email}
-      const result = await usersCollection.findOne(query)
+      let result = await usersCollection.findOne(query)
+      if(!result){
+        result = await staffCollection.findOne(query)
+      }
       res.send(result)
+      
     })
 
     app.patch("/users/:id/role", async(req,res)=>{
@@ -109,6 +116,24 @@ async function run() {
     app.get("/staffs",async(req,res)=>{
       const cursor = staffCollection.find()
       const result = await cursor.toArray()
+      res.send(result)
+    })
+
+    app.patch("/staffs/:id",async(req,res)=>{
+      const id = req.params.id;
+      const staffInfo = req.body;
+      const query = {_id : new ObjectId(id)}
+
+      const updatedDOC = {
+        $set : {
+          email : staffInfo.email,
+          contact : staffInfo.contact,
+          displayName : staffInfo.displayName,
+          photoURL : staffInfo.photoURL,
+        }
+      }
+
+      const result = await staffCollection.updateOne(query,updatedDOC)
       res.send(result)
     })
     
