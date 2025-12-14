@@ -3,6 +3,7 @@ const cors = require("cors");
 const app = express();
 require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const stripe = require('stripe')(process.env.STRIPE_SECRET);
 const port = process.env.PORT || 3000;
 
 // middleware
@@ -29,6 +30,7 @@ async function run() {
     const issueCollection = db.collection("issues");
     const usersCollection = db.collection("users");
     const staffCollection = db.collection("staffs");
+    const paymentCollection = db.collection("payments");
 
     //users
     app.get("/users/:email",async(req,res)=>{
@@ -153,6 +155,11 @@ async function run() {
       res.send(result)
     })
 
+    //Stripe Payment
+    app.post("/create-checkout-session",async(req,res)=>{
+
+    })
+
     //Issues
     app.get("/issues", async (req, res) => {
       const query = {};
@@ -164,6 +171,12 @@ async function run() {
       const result = await cursor.toArray();
       res.send(result);
     });
+
+    app.get("/issue", async(req,res)=>{
+      const cursor = issueCollection.find()
+      const result = await cursor.toArray()
+      res.send(result)
+    })
 
     app.post("/issues", async (req, res) => {
       const issues = req.body;
