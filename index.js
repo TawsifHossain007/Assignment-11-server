@@ -3,7 +3,7 @@ const cors = require("cors");
 const app = express();
 require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-const stripe = require('stripe')(process.env.STRIPE_SECRET);
+const stripe = require("stripe")(process.env.STRIPE_SECRET);
 const port = process.env.PORT || 3000;
 
 // middleware
@@ -33,132 +33,128 @@ async function run() {
     const paymentCollection = db.collection("payments");
 
     //users
-    app.get("/users/:email",async(req,res)=>{
+    app.get("/users/:email", async (req, res) => {
       const email = req.params.email;
-      const query = {email}
-      let result = await usersCollection.findOne(query)
-      if(!result){
-        result = await staffCollection.findOne(query)
+      const query = { email };
+      let result = await usersCollection.findOne(query);
+      if (!result) {
+        result = await staffCollection.findOne(query);
       }
-      res.send(result)
-    })
+      res.send(result);
+    });
 
-    app.get("/users", async(req,res)=>{
-      const cursor = usersCollection.find()
-      const result = await cursor.toArray()
-      res.send(result)
-    })
+    app.get("/users", async (req, res) => {
+      const cursor = usersCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
 
-    app.get("/users/:email/role",async(req,res)=>{
-      const email = req.params.email
-      const query = {email}
-      let result = await usersCollection.findOne(query)
-      if(!result){
-        result = await staffCollection.findOne(query)
+    app.get("/users/:email/role", async (req, res) => {
+      const email = req.params.email;
+      const query = { email };
+      let result = await usersCollection.findOne(query);
+      if (!result) {
+        result = await staffCollection.findOne(query);
       }
-      res.send(result)
-      
-    })
+      res.send(result);
+    });
 
-    app.patch("/users/:id/role", async(req,res)=>{
+    app.patch("/users/:id/role", async (req, res) => {
       const id = req.params.id;
       const roleInfo = req.body;
-      const query = {_id: new ObjectId(id)}
+      const query = { _id: new ObjectId(id) };
       const updatedDOC = {
         $set: {
-          role : roleInfo.role
-        }
-      }
-      const result = await usersCollection.updateOne(query,updatedDOC)
-      res.send(result)
-    })
+          role: roleInfo.role,
+        },
+      };
+      const result = await usersCollection.updateOne(query, updatedDOC);
+      res.send(result);
+    });
 
-    app.patch("/users/:id/status", async(req,res)=>{
+    app.patch("/users/:id/status", async (req, res) => {
       const id = req.params.id;
       const statusInfo = req.body;
-      const query = {_id: new ObjectId(id)}
+      const query = { _id: new ObjectId(id) };
       const updatedDOC = {
         $set: {
-          status : statusInfo.status
-        }
-      }
-      const result = await usersCollection.updateOne(query,updatedDOC)
-      res.send(result)
-    })
-    
-    app.patch("/users/subscribe/:email", async(req,res)=>{
+          status: statusInfo.status,
+        },
+      };
+      const result = await usersCollection.updateOne(query, updatedDOC);
+      res.send(result);
+    });
+
+    app.patch("/users/subscribe/:email", async (req, res) => {
       const email = req.params.email;
       const query = email;
       const updatedDOC = {
-        $set : {
-          role : 'Premium'
-        }
-      }
-      const result = await usersCollection.updateOne(query,updatedDOC)
+        $set: {
+          role: "Premium",
+        },
+      };
+      const result = await usersCollection.updateOne(query, updatedDOC);
       res.send(result);
-    })
+    });
 
-    app.post("/users", async(req,res)=>{
+    app.post("/users", async (req, res) => {
       const user = req.body;
-      user.role = 'user';
+      user.role = "user";
       user.createdAt = new Date();
-      user.status = 'Regular'
+      user.status = "Regular";
       const email = user.email;
-      const userExists = await usersCollection.findOne({email})
+      const userExists = await usersCollection.findOne({ email });
 
-      if(userExists){
-         return res.send({ message: 'user exists' })
+      if (userExists) {
+        return res.send({ message: "user exists" });
       }
 
       const result = await usersCollection.insertOne(user);
       res.send(result);
-    })
+    });
 
     //staffs
-    app.get("/staffs",async(req,res)=>{
-      const cursor = staffCollection.find()
-      const result = await cursor.toArray()
-      res.send(result)
-    })
+    app.get("/staffs", async (req, res) => {
+      const cursor = staffCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
 
-    app.patch("/staffs/:id",async(req,res)=>{
+    app.patch("/staffs/:id", async (req, res) => {
       const id = req.params.id;
       const staffInfo = req.body;
-      const query = {_id : new ObjectId(id)}
+      const query = { _id: new ObjectId(id) };
 
       const updatedDOC = {
-        $set : {
-          email : staffInfo.email,
-          contact : staffInfo.contact,
-          displayName : staffInfo.displayName,
-          photoURL : staffInfo.photoURL,
-        }
-      }
+        $set: {
+          email: staffInfo.email,
+          contact: staffInfo.contact,
+          displayName: staffInfo.displayName,
+          photoURL: staffInfo.photoURL,
+        },
+      };
 
-      const result = await staffCollection.updateOne(query,updatedDOC)
-      res.send(result)
-    })
-    
-    app.post("/staffs",async(req,res)=>{
+      const result = await staffCollection.updateOne(query, updatedDOC);
+      res.send(result);
+    });
+
+    app.post("/staffs", async (req, res) => {
       const staff = req.body;
-      staff.status = 'Available',
-      staff.createdAt = new Date() 
+      (staff.status = "Available"), (staff.createdAt = new Date());
 
-      const result = await staffCollection.insertOne(staff)
-      res.send(result)
-    })
+      const result = await staffCollection.insertOne(staff);
+      res.send(result);
+    });
 
-    app.delete("/staffs/:id", async(req,res)=>{
+    app.delete("/staffs/:id", async (req, res) => {
       const id = req.params.id;
-      const query = {_id : new ObjectId(id)}
-      const result = await staffCollection.deleteOne(query)
-      res.send(result)
-    })
+      const query = { _id: new ObjectId(id) };
+      const result = await staffCollection.deleteOne(query);
+      res.send(result);
+    });
 
     //Stripe Payment
-    app.post("/create-checkout-session",async(req,res)=>{
-
-    })
+    app.post("/create-checkout-session", async (req, res) => {});
 
     //Issues
     app.get("/issues", async (req, res) => {
@@ -167,23 +163,24 @@ async function run() {
       if (email) {
         query.reporterEmail = email;
       }
+
       const cursor = issueCollection.find(query);
       const result = await cursor.toArray();
       res.send(result);
     });
 
-    app.get("/issue", async(req,res)=>{
-      const cursor = issueCollection.find()
-      const result = await cursor.toArray()
-      res.send(result)
-    })
+    app.get("/issue", async (req, res) => {
+      const cursor = issueCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
 
-    app.get("/issues/:id", async(req,res)=>{
-      const id = req.params.id
-      const query = {_id : new ObjectId(id)}
-      const result = await issueCollection.findOne(query)
-      res.send(result)
-    })
+    app.get("/issues/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await issueCollection.findOne(query);
+      res.send(result);
+    });
 
     app.post("/issues", async (req, res) => {
       const issues = req.body;
@@ -191,33 +188,51 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/issues/:id",async(req,res)=>{
-      const id = req.params.id
+    app.patch("/issues/:id", async (req, res) => {
+      const id = req.params.id;
       const issueInfo = req.body;
 
-      const query = {_id : new ObjectId(id)}
+      const query = { _id: new ObjectId(id) };
 
       const updatedDOC = {
         $set: {
           title: issueInfo.title,
           description: issueInfo.description,
-            category: issueInfo.category,
-            image: issueInfo.image,
-            location: issueInfo.location,
-            date: issueInfo.date
-        }
-      }
+          category: issueInfo.category,
+          image: issueInfo.image,
+          location: issueInfo.location,
+          date: issueInfo.date,
+        },
+      };
 
-      const result = await issueCollection.updateOne(query,updatedDOC)
-      res.send(result)
-    })
+      const result = await issueCollection.updateOne(query, updatedDOC);
+      res.send(result);
+    });
 
-    app.delete("/issues/:id", async(req,res)=>{
-        const id = req.params.id;
-        const query = {_id: new ObjectId(id)}
-        const result = await issueCollection.deleteOne(query)
-        res.send(result)
-    })
+    app.patch("/issues/:id/assign", async (req, res) => {
+      const id = req.params.id;
+      const { staffId, staffEmail, staffName, trackingId } = req.body;
+      const query = { _id: new ObjectId(id) };
+
+      const updatedDOC = {
+        $set: {
+          IssueStatus: "In Progress",
+          staffId: staffId,
+          staffEmail: staffEmail,
+          staffName: staffName,
+        },
+      };
+
+      const result = await issueCollection.updateOne(query, updatedDOC);
+      res.send(result);
+    });
+
+    app.delete("/issues/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await issueCollection.deleteOne(query);
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
