@@ -178,6 +178,13 @@ async function run() {
       res.send(result)
     })
 
+    app.get("/issues/:id", async(req,res)=>{
+      const id = req.params.id
+      const query = {_id : new ObjectId(id)}
+      const result = await issueCollection.findOne(query)
+      res.send(result)
+    })
+
     app.post("/issues", async (req, res) => {
       const issues = req.body;
       const result = await issueCollection.insertOne(issues);
