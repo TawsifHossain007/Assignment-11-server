@@ -154,7 +154,9 @@ async function run() {
     });
 
     //Stripe Payment
-    app.post("/create-checkout-session", async (req, res) => {});
+    app.post("/create-checkout-session", async (req, res) => {
+
+    });
 
     //Issues
     app.get("/issues", async (req, res) => {
@@ -175,6 +177,22 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/issues/staffs",async(req,res)=>{
+      const {IssueStatus, staffEmail} = req.query;
+      const query = {}
+      if(staffEmail){
+        query.staffEmail = staffEmail
+      }
+
+      if(IssueStatus){
+        query.IssueStatus = IssueStatus
+      }
+
+      const cursor = issueCollection.find(query)
+      const result = await cursor.toArray()
+      res.send(result)
+    })
+
     app.get("/issues/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
@@ -187,6 +205,20 @@ async function run() {
       const result = await issueCollection.insertOne(issues);
       res.send(result);
     });
+
+    app.patch("/issues/:id/status", async(req,res)=>{
+      const id = req.params.id;
+      const {IssueStatus} = req.body;
+      const query = {_id : new ObjectId(id)}
+
+      const updatedDOC = {
+        $set : {
+          IssueStatus: IssueStatus
+        }
+      }
+      const result = await issueCollection.updateOne(query,updatedDOC)
+      res.send(result)
+    })
 
     app.patch("/issues/:id", async (req, res) => {
       const id = req.params.id;
@@ -216,7 +248,6 @@ async function run() {
 
       const updatedDOC = {
         $set: {
-          IssueStatus: "In Progress",
           staffId: staffId,
           staffEmail: staffEmail,
           staffName: staffName,
