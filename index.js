@@ -68,6 +68,22 @@ async function run() {
       res.send(result);
     });
 
+    app.patch("/users/:id", async (req, res) => {
+      const id = req.params.id;
+      const UserInfo = req.body;
+      const query = { _id: new ObjectId(id) };
+
+      const updatedDOC = {
+        $set: {
+          displayName: UserInfo.displayName,
+          photoURL: UserInfo.photoURL,
+        },
+      };
+
+      const result = await usersCollection.updateOne(query, updatedDOC);
+      res.send(result);
+    });
+
     app.patch("/users/:id/role", async (req, res) => {
       const id = req.params.id;
       const roleInfo = req.body;
@@ -136,7 +152,6 @@ async function run() {
 
       const updatedDOC = {
         $set: {
-          email: staffInfo.email,
           contact: staffInfo.contact,
           displayName: staffInfo.displayName,
           photoURL: staffInfo.photoURL,
@@ -170,7 +185,7 @@ async function run() {
           {
             // Provide the exact Price ID (for example, price_1234) of the product you want to sell
             price_data: {
-              currency: "USD",
+              currency: "bdt",
               product_data: {
                 name: paymentInfo.subscriptionType + " Subscription",
               },
@@ -247,7 +262,7 @@ async function run() {
           {
             // Provide the exact Price ID (for example, price_1234) of the product you want to sell
             price_data: {
-              currency: "USD",
+              currency: "bdt",
               product_data: {
                 name: paymentInfo.subscriptionType + "Boost",
               },
@@ -322,6 +337,14 @@ async function run() {
     });
 
     //payment
+    app.get("/payments/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { CustomerEmail: email };
+      const cursor = paymentCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
     app.get("/payments", async (req, res) => {
       const cursor = paymentCollection.find();
       const result = await cursor.toArray();
@@ -392,7 +415,7 @@ async function run() {
 
     app.patch("/issues/:id/upvote", async (req, res) => {
       const id = req.params.id;
-      const {userEmail} = req.body;
+      const { userEmail } = req.body;
 
       if (!userEmail) {
         return res.status(401).send({ message: "Unauthorized" });
