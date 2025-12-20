@@ -7,13 +7,12 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET);
 const port = process.env.PORT || 3000;
 
 function generateTrackingId() {
-    const prefix = "PRCL"; // your brand prefix
-    const date = new Date().toISOString().slice(0, 10).replace(/-/g, ""); // YYYYMMDD
-    const random = crypto.randomBytes(3).toString("hex").toUpperCase(); // 6-char random hex
+  const prefix = "PRCL"; // your brand prefix
+  const date = new Date().toISOString().slice(0, 10).replace(/-/g, ""); // YYYYMMDD
+  const random = crypto.randomBytes(3).toString("hex").toUpperCase(); // 6-char random hex
 
-    return `${prefix}-${date}-${random}`;
+  return `${prefix}-${date}-${random}`;
 }
-
 
 // middleware
 app.use(express.json());
@@ -184,7 +183,7 @@ async function run() {
         customer_email: paymentInfo.reporterEmail,
         mode: "payment",
         metadata: {
-          reporterName : paymentInfo.reporterName,
+          reporterName: paymentInfo.reporterName,
           reporterEmail: paymentInfo.reporterEmail,
           subscriptionType: paymentInfo.subscriptionType,
         },
@@ -199,12 +198,15 @@ async function run() {
       const session = await stripe.checkout.sessions.retrieve(session_id);
 
       const transactionId = session.payment_intent;
-      const query = {transactionId : transactionId};
+      const query = { transactionId: transactionId };
       const existingPayment = await paymentCollection.findOne(query);
-      if(existingPayment){
-        return  res.send({ success: true, message: "Payment already processed." });
+      if (existingPayment) {
+        return res.send({
+          success: true,
+          message: "Payment already processed.",
+        });
       }
-      
+
       if (session.payment_status === "paid") {
         const email = session.metadata.reporterEmail;
         const query = { email: email };
@@ -219,21 +221,21 @@ async function run() {
           amount: session.amount_total / 100,
           currency: session.currency,
           subscriptionType: session.metadata.subscriptionType,
-          CustomerName : session.metadata.reporterName,
+          CustomerName: session.metadata.reporterName,
           CustomerEmail: session.metadata.reporterEmail,
-          paymentDate : new Date(),
-          transactionId : session.payment_intent,
-          paymentStatus : session.payment_status,
+          paymentDate: new Date(),
+          transactionId: session.payment_intent,
+          paymentStatus: session.payment_status,
         };
 
         const resultPayment = await paymentCollection.insertOne(paymentRecord);
-        
+
         return res.send({
-                    success: true,
-                    modifyProfile: result,
-                    transactionId: session.payment_intent,
-                    paymentInfo: resultPayment
-                })
+          success: true,
+          modifyProfile: result,
+          transactionId: session.payment_intent,
+          paymentInfo: resultPayment,
+        });
       }
       return res.send({ success: false });
     });
@@ -258,9 +260,9 @@ async function run() {
         customer_email: paymentInfo.reporterEmail,
         mode: "payment",
         metadata: {
-          issueId : paymentInfo.issueId,
-          issueName : paymentInfo.issueName,
-          reporterName : paymentInfo.reporterName,
+          issueId: paymentInfo.issueId,
+          issueName: paymentInfo.issueName,
+          reporterName: paymentInfo.reporterName,
           reporterEmail: paymentInfo.reporterEmail,
           subscriptionType: paymentInfo.subscriptionType,
         },
@@ -275,13 +277,15 @@ async function run() {
       const session = await stripe.checkout.sessions.retrieve(session_id);
 
       const transactionId = session.payment_intent;
-      const query = {transactionId : transactionId};
+      const query = { transactionId: transactionId };
       const existingPayment = await paymentCollection.findOne(query);
-      if(existingPayment){
-        return  res.send({ success: true, message: "Payment already processed." });
+      if (existingPayment) {
+        return res.send({
+          success: true,
+          message: "Payment already processed.",
+        });
       }
 
-      
       if (session.payment_status === "paid") {
         const id = session.metadata.issueId;
         const query = { _id: new ObjectId(id) };
@@ -296,33 +300,33 @@ async function run() {
           amount: session.amount_total / 100,
           currency: session.currency,
           subscriptionType: session.metadata.subscriptionType,
-          CustomerName : session.metadata.reporterName,
-          IssueName : session.metadata.issueName,
-          IssueId : session.metadata.issueId,
+          CustomerName: session.metadata.reporterName,
+          IssueName: session.metadata.issueName,
+          IssueId: session.metadata.issueId,
           CustomerEmail: session.metadata.reporterEmail,
-          paymentDate : new Date(),
-          transactionId : session.payment_intent,
-          paymentStatus : session.payment_status,
+          paymentDate: new Date(),
+          transactionId: session.payment_intent,
+          paymentStatus: session.payment_status,
         };
 
         const resultPayment = await paymentCollection.insertOne(paymentRecord);
-        
+
         return res.send({
-                    success: true,
-                    modifyProfile: result,
-                    transactionId: session.payment_intent,
-                    paymentInfo: resultPayment
-                })
+          success: true,
+          modifyProfile: result,
+          transactionId: session.payment_intent,
+          paymentInfo: resultPayment,
+        });
       }
       return res.send({ success: false });
     });
 
     //payment
-    app.get('/payments',async(req,res)=>{
+    app.get("/payments", async (req, res) => {
       const cursor = paymentCollection.find();
       const result = await cursor.toArray();
-      res.send(result); 
-    })
+      res.send(result);
+    });
 
     //Issues
     app.get("/issues", async (req, res) => {
@@ -368,7 +372,6 @@ async function run() {
 
     app.post("/issues", async (req, res) => {
       const issues = req.body;
-      issues.createdAt = new Date();
       const result = await issueCollection.insertOne(issues);
       res.send(result);
     });
@@ -385,6 +388,30 @@ async function run() {
       };
       const result = await issueCollection.updateOne(query, updatedDOC);
       res.send(result);
+    });
+
+    app.patch("/issues/:id/upvote", async (req, res) => {
+      const id = req.params.id;
+      const {userEmail} = req.body;
+
+      if (!userEmail) {
+        return res.status(401).send({ message: "Unauthorized" });
+      }
+
+      const query = { _id: new ObjectId(id) };
+      const issue = await issueCollection.findOne(query);
+
+      if (issue.upvotedBy?.includes(userEmail)) {
+        return res.status(409).send({ message: "Already upvoted" });
+      }
+
+      const updatedDOC = {
+        $inc: { VoteCount: 1 },
+        $addToSet: { upvotedBy: userEmail },
+      };
+
+      const result = await issueCollection.updateOne(query, updatedDOC);
+      res.send({ success: true, VoteCount: issue.VoteCount + 1 });
     });
 
     app.patch("/issues/:id", async (req, res) => {
