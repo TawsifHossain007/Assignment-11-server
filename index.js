@@ -352,23 +352,47 @@ async function run() {
     });
 
     //Issues
-    app.get("/issues", async (req, res) => {
-      const query = {};
-      const { email } = req.query;
-      if (email) {
-        query.reporterEmail = email;
-      }
+app.get("/issues", async (req, res) => {
+  const query = {};
+  const { email, searchText, filter } = req.query;
 
-      const cursor = issueCollection.find(query);
-      const result = await cursor.toArray();
-      res.send(result);
-    });
+  if (email) {
+    query.reporterEmail = email;
+  }
 
-    app.get("/issue", async (req, res) => {
-      const cursor = issueCollection.find();
-      const result = await cursor.toArray();
-      res.send(result);
+  if (searchText) {
+    query.$or = [
+      { title: { $regex: searchText, $options: "i" } },
+      { location: { $regex: searchText, $options: "i" } },
+      { category: { $regex: searchText, $options: "i" } },
+    ];
+  }
+
+  const issues = await issueCollection.find(query).toArray();
+  let sortedIssues = issues;
+
+  const priorityOrder = ["High", "Normal"];
+  const statusOrder = ["Pending", "In-Progress", "Working", "Resolved", "Closed"];
+  const categoryOrder = ["Road Damage", "Water Leakage", "Garbage Overflow", "Streetlight Issue", "Other"];
+
+  if (filter === "Priority") {
+    sortedIssues.sort((a, b) => priorityOrder.indexOf(a.Priority) - priorityOrder.indexOf(b.Priority));
+  } else if (filter === "Status") {
+    sortedIssues.sort((a, b) => statusOrder.indexOf(a.IssueStatus) - statusOrder.indexOf(b.IssueStatus));
+  } else if (filter === "Category") {
+    sortedIssues.sort((a, b) => categoryOrder.indexOf(a.category) - categoryOrder.indexOf(b.category));
+  } else {
+    // default: high priority first
+    sortedIssues.sort((a, b) => {
+      if (a.Priority === "High" && b.Priority !== "High") return -1;
+      if (a.Priority !== "High" && b.Priority === "High") return 1;
+      return 0;
     });
+  }
+
+  res.send(sortedIssues);
+});
+
 
     app.get("/issues/staffs", async (req, res) => {
       const { IssueStatus, staffEmail } = req.query;
