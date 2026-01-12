@@ -8,7 +8,9 @@ const port = process.env.PORT || 3000;
 
 const admin = require("firebase-admin");
 
-const decoded = Buffer.from(process.env.FB_SERVICE_KEY, 'base64').toString('utf8')
+const decoded = Buffer.from(process.env.FB_SERVICE_KEY, "base64").toString(
+  "utf8"
+);
 const serviceAccount = JSON.parse(decoded);
 
 admin.initializeApp({
@@ -18,23 +20,6 @@ admin.initializeApp({
 // middleware
 app.use(express.json());
 app.use(cors());
-
-const verifyFBToken = async (req, res, next) => {
-  const token = req.headers.authorization;
-  if (!token) {
-    return res.status(401).send({ message: "Unauthorized" });
-  }
-
-  try {
-    const idToken = token.split(" ")[1];
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
-
-    req.decodedEmail = decodedToken.email;
-    next();
-  } catch (err) {
-    return res.status(401).send({ message: "Unauthorized" });
-  }
-};
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.vtqh62q.mongodb.net/?appName=Cluster0`;
 
@@ -50,13 +35,30 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
     const db = client.db("Assignment-11");
     const issueCollection = db.collection("issues");
     const usersCollection = db.collection("users");
     const staffCollection = db.collection("staffs");
     const paymentCollection = db.collection("payments");
+
+    const verifyFBToken = async (req, res, next) => {
+      const token = req.headers.authorization;
+      if (!token) {
+        return res.status(401).send({ message: "Unauthorized" });
+      }
+
+      try {
+        const idToken = token.split(" ")[1];
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+
+        req.decodedEmail = decodedToken.email;
+        next();
+      } catch (err) {
+        return res.status(401).send({ message: "Unauthorized" });
+      }
+    };
 
     const verifyAdmin = async (req, res, next) => {
       const email = req.decodedEmail;
@@ -93,7 +95,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/users", verifyFBToken, verifyAdmin, async (req, res) => {
+    app.get("/users", async (req, res) => {
       const cursor = usersCollection.find();
       const result = await cursor.toArray();
       res.send(result);
@@ -126,18 +128,19 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/users/:id/role", verifyAdmin, verifyFBToken, async (req, res) => {
-      const id = req.params.id;
-      const roleInfo = req.body;
-      const query = { _id: new ObjectId(id) };
-      const updatedDOC = {
-        $set: {
-          role: roleInfo.role,
-        },
-      };
-      const result = await usersCollection.updateOne(query, updatedDOC);
-      res.send(result);
-    });
+    app.patch("/users/:id/role",verifyFBToken,verifyAdmin,async (req, res) => {
+        const id = req.params.id;
+        const roleInfo = req.body;
+        const query = { _id: new ObjectId(id) };
+        const updatedDOC = {
+          $set: {
+            role: roleInfo.role,
+          },
+        };
+        const result = await usersCollection.updateOne(query, updatedDOC);
+        res.send(result);
+      }
+    );
 
     app.patch("/users/:id/status", verifyFBToken, async (req, res) => {
       const id = req.params.id;
@@ -204,7 +207,7 @@ async function run() {
       res.send(result);
     });
 
-    app.post("/staffs",verifyAdmin,verifyFBToken, async (req, res) => {
+    app.post("/staffs", verifyFBToken, verifyAdmin, async (req, res) => {
       const staff = req.body;
       (staff.status = "Available"), (staff.createdAt = new Date());
 
@@ -212,7 +215,7 @@ async function run() {
       res.send(result);
     });
 
-    app.delete("/staffs/:id",verifyFBToken,verifyAdmin, async (req, res) => {
+    app.delete("/staffs/:id", verifyFBToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await staffCollection.deleteOne(query);
@@ -220,7 +223,7 @@ async function run() {
     });
 
     //Stripe Payment
-    app.post("/create-checkout-session",verifyFBToken, async (req, res) => {
+    app.post("/create-checkout-session", verifyFBToken, async (req, res) => {
       const paymentInfo = req.body;
       const session = await stripe.checkout.sessions.create({
         line_items: [
@@ -250,12 +253,11 @@ async function run() {
       res.send({ url: session.url });
     });
 
-    app.patch("/payment-success",verifyFBToken, async (req, res) => {
+    app.patch("/payment-success", verifyFBToken, async (req, res) => {
       const session_id = req.query.session_id;
       const session = await stripe.checkout.sessions.retrieve(session_id);
 
       const transactionId = session.payment_intent;
-
 
       const query = { transactionId: transactionId };
       const existingPayment = await paymentCollection.findOne(query);
@@ -302,39 +304,43 @@ async function run() {
       return res.send({ success: false });
     });
 
-    app.post("/create-boost-checkout-session",verifyFBToken, async (req, res) => {
-      const paymentInfo = req.body;
-      const session = await stripe.checkout.sessions.create({
-        line_items: [
-          {
-            // Provide the exact Price ID (for example, price_1234) of the product you want to sell
-            price_data: {
-              currency: "bdt",
-              product_data: {
-                name: paymentInfo.subscriptionType + "Boost",
+    app.post(
+      "/create-boost-checkout-session",
+      verifyFBToken,
+      async (req, res) => {
+        const paymentInfo = req.body;
+        const session = await stripe.checkout.sessions.create({
+          line_items: [
+            {
+              // Provide the exact Price ID (for example, price_1234) of the product you want to sell
+              price_data: {
+                currency: "bdt",
+                product_data: {
+                  name: paymentInfo.subscriptionType + "Boost",
+                },
+                unit_amount: parseInt(paymentInfo.amount * 100), // amount in cents
               },
-              unit_amount: parseInt(paymentInfo.amount * 100), // amount in cents
+
+              quantity: 1,
             },
-
-            quantity: 1,
+          ],
+          customer_email: paymentInfo.reporterEmail,
+          mode: "payment",
+          metadata: {
+            issueId: paymentInfo.issueId,
+            issueName: paymentInfo.issueName,
+            reporterName: paymentInfo.reporterName,
+            reporterEmail: paymentInfo.reporterEmail,
+            subscriptionType: paymentInfo.subscriptionType,
           },
-        ],
-        customer_email: paymentInfo.reporterEmail,
-        mode: "payment",
-        metadata: {
-          issueId: paymentInfo.issueId,
-          issueName: paymentInfo.issueName,
-          reporterName: paymentInfo.reporterName,
-          reporterEmail: paymentInfo.reporterEmail,
-          subscriptionType: paymentInfo.subscriptionType,
-        },
-        success_url: `${process.env.SITE_DOMAIN}/dashboard/boost-payment-success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${process.env.SITE_DOMAIN}/dashboard/boost-payment-cancel`,
-      });
-      res.send({ url: session.url });
-    });
+          success_url: `${process.env.SITE_DOMAIN}/dashboard/boost-payment-success?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${process.env.SITE_DOMAIN}/dashboard/boost-payment-cancel`,
+        });
+        res.send({ url: session.url });
+      }
+    );
 
-    app.patch("/boost-payment-success",verifyFBToken, async (req, res) => {
+    app.patch("/boost-payment-success", verifyFBToken, async (req, res) => {
       const session_id = req.query.session_id;
       const session = await stripe.checkout.sessions.retrieve(session_id);
 
@@ -402,7 +408,7 @@ async function run() {
     });
 
     //Issues
-    app.get("/issues",verifyFBToken, async (req, res) => {
+    app.get("/issues", async (req, res) => {
       const query = {};
       const { email, searchText, filter, limit, skip } = req.query;
 
@@ -465,7 +471,7 @@ async function run() {
       res.send({ issues, total });
     });
 
-    app.get("/issues/staffs",verifyFBToken,verifyStaff, async (req, res) => {
+    app.get("/issues/staffs", verifyFBToken, verifyStaff, async (req, res) => {
       const { IssueStatus, staffEmail } = req.query;
       const query = {};
       if (staffEmail) {
@@ -481,34 +487,35 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/issues/:id",verifyFBToken, async (req, res) => {
+    app.get("/issues/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await issueCollection.findOne(query);
       res.send(result);
     });
 
-    app.post("/issues",verifyFBToken, async (req, res) => {
+    app.post("/issues", verifyFBToken, async (req, res) => {
       const issues = req.body;
       const result = await issueCollection.insertOne(issues);
       res.send(result);
     });
 
-    app.patch("/issues/:id/status",verifyFBToken,verifyStaff, async (req, res) => {
-      const id = req.params.id;
-      const { IssueStatus } = req.body;
-      const query = { _id: new ObjectId(id) };
+    app.patch("/issues/:id/status",verifyFBToken,verifyAdmin,async (req, res) => {
+        const id = req.params.id;
+        const { IssueStatus } = req.body;
+        const query = { _id: new ObjectId(id) };
 
-      const updatedDOC = {
-        $set: {
-          IssueStatus: IssueStatus,
-        },
-      };
-      const result = await issueCollection.updateOne(query, updatedDOC);
-      res.send(result);
-    });
+        const updatedDOC = {
+          $set: {
+            IssueStatus: IssueStatus,
+          },
+        };
+        const result = await issueCollection.updateOne(query, updatedDOC);
+        res.send(result);
+      }
+    );
 
-    app.patch("/issues/:id/upvote",verifyFBToken, async (req, res) => {
+    app.patch("/issues/:id/upvote", verifyFBToken, async (req, res) => {
       const id = req.params.id;
       const { userEmail } = req.body;
 
@@ -532,7 +539,7 @@ async function run() {
       res.send({ success: true, VoteCount: issue.VoteCount + 1 });
     });
 
-    app.patch("/issues/:id",verifyFBToken, async (req, res) => {
+    app.patch("/issues/:id", verifyFBToken, async (req, res) => {
       const id = req.params.id;
       const issueInfo = req.body;
 
@@ -553,25 +560,26 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/issues/:id/assign",verifyFBToken,verifyAdmin, async (req, res) => {
-      const id = req.params.id;
-      const { staffId, staffEmail, staffName, trackingId } = req.body;
-      const query = { _id: new ObjectId(id) };
+    app.patch("/issues/:id/assign",verifyFBToken,verifyAdmin,async (req, res) => {
+        const id = req.params.id;
+        const { staffId, staffEmail, staffName, trackingId } = req.body;
+        const query = { _id: new ObjectId(id) };
 
-      const updatedDOC = {
-        $set: {
-          staffId: staffId,
-          staffEmail: staffEmail,
-          staffName: staffName,
-          assignDate: new Date(),
-        },
-      };
+        const updatedDOC = {
+          $set: {
+            staffId: staffId,
+            staffEmail: staffEmail,
+            staffName: staffName,
+            assignDate: new Date(),
+          },
+        };
 
-      const result = await issueCollection.updateOne(query, updatedDOC);
-      res.send(result);
-    });
+        const result = await issueCollection.updateOne(query, updatedDOC);
+        res.send(result);
+      }
+    );
 
-    app.delete("/issues/:id",verifyFBToken,verifyAdmin, async (req, res) => {
+    app.delete("/issues/:id", verifyFBToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await issueCollection.deleteOne(query);
@@ -583,8 +591,6 @@ async function run() {
     // console.log(
     //   "Pinged your deployment. You successfully connected to MongoDB!"
     // );
-
-
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
