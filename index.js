@@ -500,7 +500,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/issues/:id/status",verifyFBToken,verifyAdmin,async (req, res) => {
+    app.patch("/issues/:id/status",verifyFBToken,async (req, res) => {
         const id = req.params.id;
         const { IssueStatus } = req.body;
         const query = { _id: new ObjectId(id) };
